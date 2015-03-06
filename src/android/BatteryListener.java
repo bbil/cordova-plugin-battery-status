@@ -49,10 +49,10 @@ public class BatteryListener extends CordovaPlugin {
     /**
      * Executes the request.
      *
-     * @param action        	The action to execute.
-     * @param args          	JSONArry of arguments for the plugin.
-     * @param callbackContext 	The callback context used when calling back into JavaScript.
-     * @return              	True if the action was valid, false if not.
+     * @param action            The action to execute.
+     * @param args              JSONArry of arguments for the plugin.
+     * @param callbackContext   The callback context used when calling back into JavaScript.
+     * @return                  True if the action was valid, false if not.
      */
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
         if (action.equals("start")) {
@@ -62,19 +62,7 @@ public class BatteryListener extends CordovaPlugin {
             }
             this.batteryCallbackContext = callbackContext;
 
-            // We need to listen to power events to update battery status
-            IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
-            if (this.receiver == null) {
-                this.receiver = new BroadcastReceiver() {
-                    @Override
-                    public void onReceive(Context context, Intent intent) {
-                        updateBatteryInfo(intent);
-                    }
-                };
-                webView.getContext().registerReceiver(this.receiver, intentFilter);
-            }
-
+            addBatteryListener();
             // Don't return any result now, since status results will be sent when events come in from broadcast receiver
             PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
             pluginResult.setKeepCallback(true);
@@ -91,6 +79,19 @@ public class BatteryListener extends CordovaPlugin {
         }
 
         return false;
+    }
+    /**
+     * Start battery receiver.
+     */
+    public void onResume() {
+        addBatteryListener();
+    }
+
+    /**
+     * Stop battery receiver.
+     */
+    public void onPause() {
+        removeBatteryListener();
     }
 
     /**
@@ -119,6 +120,29 @@ public class BatteryListener extends CordovaPlugin {
                 Log.e(LOG_TAG, "Error unregistering battery receiver: " + e.getMessage(), e);
             }
         }
+    }
+
+    private void addBatteryListener() {
+        try {
+            // We need to listen to power events to update battery status
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
+            if (this.receiver == null) {
+                this.receiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        updateBatteryInfo(intent);
+                    }
+                };
+                webView.getContext().registerReceiver(this.receiver, intentFilter);
+            }
+
+            webView.getContext().registerReceiver(this.receiver);
+            this.receiver = null;
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error registering battery receiver: " + e.getMessage(), e);
+        }
+        
     }
 
     /**
